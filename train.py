@@ -20,7 +20,7 @@ def train(user_input, dataset_yaml, device):
         console.print("[bold green]👉 Tiếp tục train từ model cũ...[/bold green]")
         model = YOLO(r"model\best.pt")
 
-        results = model.train(data=dataset_yaml, epochs=100, imgsz=640, device=device)
+        results = model.train(data=dataset_yaml, epochs=200, imgsz=640, patience=50, device=device)
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
