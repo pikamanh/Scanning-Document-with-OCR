@@ -2,11 +2,18 @@ from ultralytics import YOLO
 import torch
 import cv2
 
+from pre_proccessing import AllignImage
+from OCR import OCR
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def main():
     model = YOLO(r"model\best.pt")
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(r"rtsp://192.168.1.9:8080/h264.sdp")
+    alignImage = AllignImage()
+    ocr = OCR()
+
+    img_path = "temp/temp.jpg"
 
     frame_count = 0
     skip = 30
@@ -21,7 +28,7 @@ def main():
         if frame_count % skip == 0:
             results = model.predict(frame, device=device, conf=0.8)
 
-            if all(result.probs is None for result in results):
+            if not results or len(results[0].boxes) == 0:
                 print("Cannot detection.")
                 continue
             try:
@@ -32,14 +39,26 @@ def main():
                     bottom_x = int(xyxy[0][2])
                     bottom_y = int(xyxy[0][3])
 
-                    fix_top_x, fix_bottom_x, fix_top_y, fix_bottom_y = top_x - 10, bottom_x + 10, top_y - 10, bottom_y + 10
+                    fix_top_x, fix_bottom_x, fix_top_y, fix_bottom_y = top_x - 50, bottom_x + 50, top_y - 50, bottom_y + 50
 
                     if all(v >= 0 for v in [fix_top_x, fix_bottom_x, fix_top_y, fix_bottom_y]):
                         cropped_image = frame[fix_top_y:fix_bottom_y, fix_top_x:fix_bottom_x]    
                     else:
                         cropped_image = frame[top_y:bottom_y, top_x:bottom_x]    
 
-                    cv2.imwrite("temp/temp.jpg", cropped_image)
+                    # Xoay ảnh 90 độ theo chiều kim đồng hồ
+                    cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_90_CLOCKWISE)
+                    cv2.imwrite(img_path, cropped_image)
+                
+                #Align Image
+                image_proccessed = alignImage.allign(img_path)
+
+                #Get OCR
+                information = ocr.predict(image_proccessed)
+
+                print("Information:\n")
+                for field, value in information.items():
+                    print(f"{field}: {value}\n")
             except Exception as e:
                 print(f"Error: {e}")
 
