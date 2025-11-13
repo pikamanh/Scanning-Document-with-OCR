@@ -8,12 +8,13 @@ from OCR import OCR
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def main():
-    model = YOLO(r"model\best.pt")
+    model = YOLO(r"model\best_detection_cccd.pt")
     cam = cv2.VideoCapture(r"rtsp://192.168.1.9:8080/h264.sdp")
     alignImage = AllignImage()
     ocr = OCR()
+    num = 1
 
-    img_path = "temp/temp.jpg"
+    # img_path = "temp/temp.jpg"
 
     frame_count = 0
     skip = 30
@@ -48,17 +49,20 @@ def main():
 
                     # Xoay ảnh 90 độ theo chiều kim đồng hồ
                     cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_90_CLOCKWISE)
-                    cv2.imwrite(img_path, cropped_image)
-                
-                #Align Image
-                image_proccessed = alignImage.allign(img_path)
+                    cv2.imwrite(f"temp/temp{num}.jpg", cropped_image)
+                num+=1
+                # print("Finish Detection.")
+                # #Align Image
+                # image_proccessed = alignImage.allign(img_path)
+                # print("Finish processing.")
 
-                #Get OCR
-                information = ocr.predict(image_proccessed)
+                # #Get OCR
+                # information = ocr.predict(image_proccessed)
+                # print("Finish get information.")
 
-                print("Information:\n")
-                for field, value in information.items():
-                    print(f"{field}: {value}\n")
+                # print("Information:\n")
+                # for field, value in information.items():
+                #     print(f"{field}: {value}\n")
             except Exception as e:
                 print(f"Error: {e}")
 
