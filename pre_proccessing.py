@@ -127,9 +127,9 @@ class ProccessingImage:
         return cropped_image
 
 if __name__ == "__main__":
-    image = cv2.imread(r"temp\temp17.jpg")
+    image = cv2.imread(r"temp\temp.jpg")
     processingImage = ProccessingImage()
-    cropped_image = processingImage.focus_image(r"temp\temp17.jpg")
+    cropped_image = processingImage.focus_image(r"temp\temp.jpg")
     # processingImage.draw_line(image, top_line, (0, 255, 0))    # Xanh lá
     # processingImage.draw_line(image, bottom_line, (0, 255, 0)) # Xanh lá
     # processingImage.draw_line(image, left_line, (255, 0, 0))   # Xanh dương

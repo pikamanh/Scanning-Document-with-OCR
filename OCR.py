@@ -1,6 +1,8 @@
 from PIL import Image
 import cv2
+import matplotlib.pyplot as plt
 
+from pre_proccessing import ProccessingImage
 from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 
@@ -13,22 +15,34 @@ class OCR:
         self.results = {}
         self.img = None
         self.rois = {
-            "id_number":        (270, 340, 250, 490),
-            "name":             (360, 416, 170, 470),
-            "dob":              (410, 450, 370, 500),
-            "gender":           (450, 490, 310, 360),
-            "national":         (450, 485, 520, 620),
-            "place_orgin":      (515, 575, 180, 630),
-            "place_of_residence1": (565, 605, 435, 620),
-            "place_of_residence2": (600, 640, 185, 620)
+            "id_number":        (275, 326, 230, 480),
+            "name":             (357, 405, 171, 640),
+            "dob":              (405, 439, 358, 483),
+            "gender":           (440, 478, 292, 345),
+            "national":         (430, 478, 502, 609),
+            "place_orgin":      (512, 553, 171, 640),
+            "place_of_residence1": (551, 592, 423, 620),
+            "place_of_residence2": (588, 630, 171, 620)
         }
 
     def predict(self, img):
         self.img = cv2.resize(img, (640, 640), interpolation=cv2.INTER_AREA)
-        for field, (y1, y2, x1, x2) in self.rois.items():
-            roi_img = self.img[y1:y2, x1:x2]
-            roi_img = Image.fromarray(roi_img)
-            text = self.detector(roi_img)
-            self.results[field] = text
+        # for field, (y1, y2, x1, x2) in self.rois.items():
+        #     roi_img = self.img[y1:y2, x1:x2]
+        #     roi_img = Image.fromarray(roi_img)
+        #     text = self.detector(roi_img)
+        #     self.results[field] = text
 
-        return self.results
+        return self.img
+    
+if __name__ == "__main__":
+    proccessingImage = ProccessingImage()
+    ocr = OCR()
+    cropped_image = proccessingImage.focus_image(r"temp/temp17.jpg")
+    test = ocr.predict(cropped_image)
+
+    fig, axs = plt.subplots(1, 2)
+    axs[0].imshow(test)
+    axs[1].imshow(test[588:630, 171:620])
+    plt.tight_layout()
+    plt.show()
