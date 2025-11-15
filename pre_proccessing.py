@@ -4,19 +4,16 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 
 class ProccessingImage:
-    def __init__(self, img_path):
-        self.img = cv2.imread(img_path)
-        self.height, self.width = self.img.shape[:2]
-        self.center = (self.width//2, self.height//2)
+    def __init__(self):
+        pass
 
-
-    def canny(self, min_thresh=50, max_thresh=200):
-        gray_img = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-        canny_img = cv2.Canny(gray_img, min_thresh, max_thresh)
+    def canny(self, img, min_threshold, max_threshold):
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        canny_img = cv2.Canny(gray_img, min_threshold, max_threshold)
 
         return canny_img
     
-    def get_lines(self, img_canny, threshold=180):
+    def get_lines(self, img_canny, threshold):
         lines = cv2.HoughLines(img_canny, 1, np.pi/180, threshold)
 
         return lines
@@ -33,9 +30,11 @@ class ProccessingImage:
         x0, y0 = np.linalg.lstsq(A, b, rcond=None)[0]
         return [int(np.round(x0)), int(np.round(y0))]
 
-    def rotate_image(self):
-        canny = self.canny()
-        lines = self.get_lines(canny)
+    def rotate_image(self, img):
+        height, width = img.shape[:2]
+        center = (width//2, height//2)
+        canny = cv2.Canny(img, 50, 200)
+        lines = cv2.HoughLines(canny, 1, np.pi/180, 180)
         min_horizontal_rad = np.deg2rad(45)
         max_horizontal_rad = np.deg2rad(135)
 
@@ -47,23 +46,94 @@ class ProccessingImage:
 
         angle_rad = horizontal_theta - (np.pi/2)
         angle_deg = np.rad2deg(angle_rad)
-        M = cv2.getRotationMatrix2D(center=self.center, angle=angle_deg, scale=1)
+        M = cv2.getRotationMatrix2D(center=center, angle=angle_deg, scale=1)
 
         rotated_image = cv2.warpAffine(
-            src=self.img.copy(),
+            src=img.copy(),
             M=M, 
-            dsize=(self.width, self.height),
+            dsize=(width, height),
             flags=cv2.INTER_CUBIC,
             borderMode=cv2.BORDER_REPLICATE
         )
 
         return rotated_image
     
-    def focus_image(self):
+    def focus_image(self, img_path):
         horizontal_lines = []
         vertical_lines = []
 
-        canny = self.canny()
-        lines = self.get_lines(canny)
+        angle_threshold_rad = np.deg2rad(20)
+        horizontal_target_rad = np.pi / 2
+        img = cv2.imread(img_path)
 
-        
+        rotated_image = self.rotate_image(img)
+        canny = cv2.Canny(rotated_image, 50, 150)
+        lines = cv2.HoughLines(canny, 1, np.pi/180, 180)
+
+        # return rotated_image
+        for line in lines:
+            rho, theta = line[0]
+
+            # Kiểm tra đường ngang (gần 90 độ)
+            if abs(theta - horizontal_target_rad) < angle_threshold_rad:
+                horizontal_lines.append((rho, theta))
+            
+            # Kiểm tra đường dọc (gần 0 hoặc 180 độ)
+            elif abs(theta) < angle_threshold_rad or abs(theta - np.pi) < angle_threshold_rad:
+                vertical_lines.append((rho, theta))
+
+        if not horizontal_lines or not vertical_lines:
+            print("Không tìm đủ đường ngang hoặc dọc, hãy thử điều chỉnh ngưỡng Canny hoặc HoughLines.")
+        else:
+            horizontal_lines.sort(key=lambda x: x[0])
+            vertical_lines.sort(key=lambda x: x[0])
+
+        # Lấy đường có rho nhỏ nhất và lớn nhất
+        top_line = horizontal_lines[0]
+        bottom_line = horizontal_lines[-1]
+        left_line = vertical_lines[-1]
+        right_line = vertical_lines[0]
+
+        corner_tl = self.line_intersection(top_line, left_line)
+        corner_tr = self.line_intersection(top_line, right_line)
+        corner_bl = self.line_intersection(bottom_line, left_line)
+        corner_br = self.line_intersection(bottom_line, right_line)
+        src_points = np.float32([corner_tl, corner_tr, corner_br, corner_bl])
+
+        # Tính chiều rộng và chiều cao mới
+        # Chiều rộng = khoảng cách trung bình giữa (tl, tr) và (bl, br)
+        width_top = np.linalg.norm(np.array(corner_tl) - np.array(corner_tr))
+        width_bottom = np.linalg.norm(np.array(corner_bl) - np.array(corner_br))
+        max_width = int(max(width_top, width_bottom))
+        # Chiều cao = khoảng cách trung bình giữa (tl, bl) và (tr, br)
+        height_left = np.linalg.norm(np.array(corner_tl) - np.array(corner_bl))
+        height_right = np.linalg.norm(np.array(corner_tr) - np.array(corner_br))
+        max_height = int(max(height_left, height_right))
+
+        # Tọa độ đích (hình chữ nhật hoàn hảo)
+        dst_points = np.float32([
+            [0, 0],              # Top-left
+            [max_width - 1, 0],  # Top-right
+            [max_width - 1, max_height - 1], # Bottom-right
+            [0, max_height - 1]  # Bottom-left
+        ])
+
+        # Lấy ma trận biến đổi
+        M = cv2.getPerspectiveTransform(src_points, dst_points)
+
+        # Áp dụng biến đổi
+        cropped_image = cv2.warpPerspective(rotated_image, M, (max_width, max_height))
+
+        return cropped_image
+
+if __name__ == "__main__":
+    image = cv2.imread(r"temp\temp17.jpg")
+    processingImage = ProccessingImage()
+    cropped_image = processingImage.focus_image(r"temp\temp17.jpg")
+    # processingImage.draw_line(image, top_line, (0, 255, 0))    # Xanh lá
+    # processingImage.draw_line(image, bottom_line, (0, 255, 0)) # Xanh lá
+    # processingImage.draw_line(image, left_line, (255, 0, 0))   # Xanh dương
+    # processingImage.draw_line(image, right_line, (255, 0, 0))  # Xanh dương
+
+    plt.imshow(cropped_image)
+    plt.show()
