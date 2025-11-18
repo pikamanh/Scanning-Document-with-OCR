@@ -1,10 +1,13 @@
 from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pre_proccessing import ProccessingImage
 from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
+
+from ctpn_model.predict import get_text_boxes
 
 class OCR:
     def __init__(self, model_name="vgg_transformer", device="cuda"):
@@ -15,34 +18,47 @@ class OCR:
         self.results = {}
         self.img = None
         self.rois = {
-            "id_number":        (275, 326, 230, 480),
-            "name":             (357, 405, 171, 640),
-            "dob":              (405, 439, 358, 483),
-            "gender":           (440, 478, 292, 345),
-            "national":         (430, 478, 502, 609),
-            "place_orgin":      (512, 553, 171, 640),
-            "place_of_residence1": (551, 592, 423, 620),
-            "place_of_residence2": (588, 630, 171, 620)
+            "id_number":        None,
+            "name":             None,
+            "dob":              None,
+            "gender":           None,
+            "national":         None,
+            "place_orgin":      None,
+            "place_of_residence1": None,
+            "place_of_residence2": None,
+            "date_expired": None
         }
 
     def predict(self, img):
         self.img = cv2.resize(img, (640, 640), interpolation=cv2.INTER_AREA)
-        # for field, (y1, y2, x1, x2) in self.rois.items():
-        #     roi_img = self.img[y1:y2, x1:x2]
-        #     roi_img = Image.fromarray(roi_img)
-        #     text = self.detector(roi_img)
-        #     self.results[field] = text
+        text, out_img = get_text_boxes(self.img)
+        corner_list = []
+        
+        for corners_probs in text:
+            corners = [int(corner) for corner in corners_probs[:-1]]
+            corner_list.append(corners)
 
-        return self.img
+        corner_list = np.array(corner_list)
+        corner_list = corner_list[corner_list[:, 1].argsort()]
+
+        for key, value in zip(self.rois.keys(), corner_list):
+            self.rois[key] = (value[0].item(), value[1].item(), value[6].item(), value[7].item())
+        
+        date_expired = self.rois["place_of_residence2"]
+        self.rois["place_of_residence2"] = self.rois["date_expired"]
+        self.rois["date_expired"] = date_expired
+
+        for field, (x1, y1, x2, y2) in self.rois.items():
+            roi_img = self.img[y1:y2, x1:x2]
+            roi_img = Image.fromarray(roi_img)
+            text = self.detector(roi_img)
+            self.results[field] = text
+        return self.results
     
 if __name__ == "__main__":
     proccessingImage = ProccessingImage()
     ocr = OCR()
-    cropped_image = proccessingImage.focus_image(r"temp/temp17.jpg")
+    cropped_image = proccessingImage.focus_image(r"temp/temp3.jpg")
     test = ocr.predict(cropped_image)
 
-    fig, axs = plt.subplots(1, 2)
-    axs[0].imshow(test)
-    axs[1].imshow(test[588:630, 171:620])
-    plt.tight_layout()
-    plt.show()
+    print(test)
