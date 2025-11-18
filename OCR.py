@@ -51,7 +51,7 @@ class OCR:
         for field, (x1, y1, x2, y2) in self.rois.items():
             roi_img = self.img[y1:y2, x1:x2]
             roi_img = Image.fromarray(roi_img)
-            text = self.detector(roi_img)
+            text = self.detector.predict(roi_img)
             self.results[field] = text
         return self.results
     
