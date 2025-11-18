@@ -48,17 +48,20 @@ class OCR:
         self.rois["place_of_residence2"] = self.rois["date_expired"]
         self.rois["date_expired"] = date_expired
 
-        for field, (x1, y1, x2, y2) in self.rois.items():
-            roi_img = self.img[y1:y2, x1:x2]
-            roi_img = Image.fromarray(roi_img)
-            text = self.detector.predict(roi_img)
-            self.results[field] = text
-        return self.results
+        try:
+            for field, (x1, y1, x2, y2) in self.rois.items():
+                roi_img = self.img[y1:y2, x1:x2]
+                roi_img = Image.fromarray(roi_img)
+                text = self.detector.predict(roi_img)
+                self.results[field] = text
+            return self.results
+        except Exception as e:
+            return "Thông tin trích xuất hiện không đủ. Vui lòng thử lại sau."
     
 if __name__ == "__main__":
     proccessingImage = ProccessingImage()
     ocr = OCR()
-    cropped_image = proccessingImage.focus_image(r"temp/temp3.jpg")
+    cropped_image = proccessingImage.focus_image(r"temp/test1.jpg")
     test = ocr.predict(cropped_image)
 
     print(test)
