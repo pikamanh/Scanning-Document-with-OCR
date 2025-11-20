@@ -2,8 +2,8 @@ from ultralytics import YOLO
 import torch
 import cv2
 
-from pre_proccessing import ProccessingImage
-from OCR import OCR
+from app.utils.pre_proccessing import ProccessingImage
+from app.recognizer.OCR import OCR
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -12,7 +12,7 @@ def main():
     cam = cv2.VideoCapture(r"rtsp://192.168.1.9:8080/h264.sdp")
     proccessingImage = ProccessingImage()
     ocr = OCR()
-    # img_path = "temp/temp.jpg"
+    img_path = "temp/temp.jpg"
 
     frame_count = 0
     skip = 30
@@ -47,19 +47,20 @@ def main():
 
                     # Xoay ảnh 90 độ theo chiều kim đồng hồ
                     cropped_image = cv2.rotate(cropped_image, cv2.ROTATE_90_CLOCKWISE)
-                    cv2.imwrite(f"temp/temp{frame_count}.jpg", cropped_image)
-                # print("Finish Detection.")
-                # #Align Image
-                # image_proccessed = alignImage.allign(img_path)
-                # print("Finish processing.")
+                    cv2.imwrite(img_path, cropped_image)
+                #Align Image
+                image_proccessed = proccessingImage.focus_image(img_path)
 
-                # #Get OCR
-                # information = ocr.predict(image_proccessed)
-                # print("Finish get information.")
+                #Get OCR
+                information = ocr.predict(image_proccessed)
 
-                # print("Information:\n")
-                # for field, value in information.items():
-                #     print(f"{field}: {value}\n")
+                try:
+                    print("Information:\n")
+                    for field, value in information.items():
+                        print(f"{field}: {value}\n")
+                except Exception as e:
+                    print(information)
+
             except Exception as e:
                 print(f"Error: {e}")
 

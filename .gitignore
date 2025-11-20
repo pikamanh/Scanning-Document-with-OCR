@@ -2,7 +2,7 @@ venv/
 datasets/
 runs/
 __pycache__/
-ctpn_model/checkpoints/
+app/detector/checkpoints/
 temp/
 results/
 yolo11n.pt
