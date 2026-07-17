@@ -26,16 +26,29 @@ A desktop application for extracting information from the front side of a Vietna
 
 ## Processing Pipeline
 
-```mermaid
-flowchart LR
-    A[Webcam / RTSP] --> B[Read frames with OpenCV]
-    B --> C[Detect the ID card with YOLO]
-    C --> D[Crop and rotate 90 degrees]
-    D --> E[Deskew with Hough Transform]
-    E --> F[Detect text lines with CTPN]
-    F --> G[Recognize text with VietOCR]
-    G --> H[Normalize and validate fields]
-    H --> I[Display results in PyQt6]
+```text
+Webcam or RTSP stream
+        │
+        ▼
+Read video frames with OpenCV
+        │
+        ▼
+Detect the ID card with YOLO
+        │
+        ▼
+Crop, rotate, and deskew the card
+        │
+        ▼
+Detect text lines with CTPN
+        │
+        ▼
+Recognize Vietnamese text with VietOCR
+        │
+        ▼
+Normalize and validate the extracted fields
+        │
+        ▼
+Display the result in the PyQt6 interface
 ```
 
 The interface reads a video frame approximately every 30 ms. By default, one frame is submitted to the recognition worker after every 30 captured frames, preventing the inference pipeline from blocking the UI. YOLO detections must have a confidence score of at least `0.8`.
